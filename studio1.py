@@ -6,7 +6,6 @@ import matplotlib.pyplot as plt
 
 
 def consteq(T: float) -> np.ndarray:
-    """Equilibrium constants Keq(T) for the two reactions."""
     Keq_ref = np.array([6.428e-6, 2.493e-2], dtype=float)  
     delHr_fit = np.array([-59.032, 38.916], dtype=float) * 1e3 
     R = 8.314
@@ -23,14 +22,8 @@ def r_calc(Pi_bar: np.ndarray, T: float, Keq: np.ndarray) -> np.ndarray: #hittar
     R = 8.314
 
     kref = np.array([6.9e-4, 1.8e-3], dtype=float)
-
-
     Ea = np.array([35.7, 54.5], dtype=float) * 1e3
-
-
     Kref = np.array([0.76, 0.79], dtype=float)  
-
-    
     delHa = np.array([-12.5, -25.9], dtype=float) * 1e3 #ads H = entalpiändring när molekyl adsorberas, högt neg > starkare ads
 
     k = kref * np.exp(Ea / R * (1.0 / Tref - 1.0 / T))
@@ -52,11 +45,6 @@ def _partials(F: np.ndarray, Ptot_bar: float) -> np.ndarray:
 
 
 def pfr_isothermal_rhs(W: float, F: np.ndarray, Ptot_bar: float, T: float) -> np.ndarray:
-    """
-    Isothermal packed bed reactor:
-      dF/dW = nu * r
-    where W is catalyst mass [kg cat].
-    """
     Pi = _partials(F, Ptot_bar)
     Keq = consteq(T)
     r = r_calc(Pi, T, Keq)  # [r1, r2]
@@ -98,34 +86,29 @@ def run_task_a():
     # Plots requested in Task A
     plt.figure()
     plt.plot(W, X_CO2)
-    plt.xlabel("Catalyst mass W")
-    plt.ylabel("CO2 conversion X")
-    plt.title("Conversion")
+    plt.xlabel("Catalyst mass (kg)")
+    plt.ylabel("Conversion X")
+    plt.title("Conversion (A)")
 
     plt.figure()
     plt.plot(W, F[:, 1])
-    plt.xlabel("Catalyst mass W")
-    plt.ylabel("F_CO2 (mol/s)")
-    plt.title("CO2 molar flow")
+    plt.xlabel("Catalyst mass (kg)")
+    plt.ylabel("molar flow (mol/s)")
+    plt.title("FCO2 (A)")
 
     plt.figure()
     plt.plot(W, F[:, 2])
-    plt.xlabel("Catalyst mass W")
-    plt.ylabel("F_CH3OH (mol/s)")
-    plt.title("Methanol molar flow")
+    plt.xlabel("Catalyst mass (kg)")
+    plt.ylabel("molar flow (mol/s)")
+    plt.title("FCH3OH (A)")
 
     plt.figure()
     plt.plot(W, F[:, 3])
-    plt.xlabel("Catalyst mass W)")
-    plt.ylabel("F_CO (mol/s)")
-    plt.title("CO molar flow")
+    plt.xlabel("Catalyst mass (kg)")
+    plt.ylabel("molar flow (mol/s)")
+    plt.title("FCO (A)")
 
     plt.show()
-
-    # Optional: print end values
-    print("End flows [H2, CO2, CH3OH, CO, H2O] (mol/s):")
-    print(F[-1])
-    print("End CO2 conversion:", X_CO2[-1])
 
     return sol
 

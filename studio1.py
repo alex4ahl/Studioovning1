@@ -103,6 +103,12 @@ def run_task_a():
     plt.title("Conversion")
 
     plt.figure()
+    plt.plot(W, F[:, 1])
+    plt.xlabel("Catalyst mass W")
+    plt.ylabel("F_CO2 (mol/s)")
+    plt.title("CO2 molar flow")
+
+    plt.figure()
     plt.plot(W, F[:, 2])
     plt.xlabel("Catalyst mass W")
     plt.ylabel("F_CH3OH (mol/s)")

@@ -1,7 +1,5 @@
-2
 import numpy as np
 import matplotlib.pyplot as plt
-
 from scipy.optimize import fsolve
 
 # ============================================================
@@ -9,30 +7,25 @@ from scipy.optimize import fsolve
 # ============================================================
 P = 760.0  # mmHg
 
-# Wilson parameters (given)
+# Wilson parameters
 W12 = 0.65675
 W21 = 0.77204
 
-# Antoine constants (T in degC, Psat in mmHg, log10 form)
+# Antoine constants (T in °C, Psat in mmHg, log10 form)
 # Psat = 10^(A - B/(T + C))
 A1, B1, C1 = 7.02447, 1161.00, 224.00   # acetone
 A2, B2, C2 = 7.87863, 1473.11, 230.00   # methanol
 
 
 # ============================================================
-# Thermo helper functions
+# Helpers
 # ============================================================
 def antoine_psat(T, A, B, C):
-    """Antoine vapor pressure in mmHg, T in degC."""
     return 10.0 ** (A - (B / (T + C)))
 
 
 def wilson_gammas(x1, W12, W21):
-    """
-    Wilson activity coefficients for a binary mixture.
-    Returns (gamma1, gamma2) for composition x1, x2=1-x1.
-    """
-    x1 = np.clip(x1, 1e-14, 1 - 1e-14)
+    x1 = float(np.clip(x1, 1e-14, 1 - 1e-14))
     x2 = 1.0 - x1
 
     ln_gamma1 = -np.log(x1 + W12 * x2) + x2 * (
@@ -41,18 +34,30 @@ def wilson_gammas(x1, W12, W21):
     ln_gamma2 = -np.log(x2 + W21 * x1) - x1 * (
         (W12 / (x1 + W12 * x2)) - (W21 / (W21 * x1 + x2))
     )
-
     return np.exp(ln_gamma1), np.exp(ln_gamma2)
 
 
 def K_values(T, x1):
-    """Compute K1, K2 using modified Raoult: Ki = gamma_i * Psat_i / P."""
     g1, g2 = wilson_gammas(x1, W12, W21)
     P1sat = antoine_psat(T, A1, B1, C1)
     P2sat = antoine_psat(T, A2, B2, C2)
     K1 = g1 * P1sat / P
     K2 = g2 * P2sat / P
     return K1, K2, g1, g2, P1sat, P2sat
+
+
+def robust_fsolve(fun, x0_list, tol=1e-10, maxfev=300):
+    """
+    Prova fsolve med flera startgissningar.
+    Returnerar (sol, ier, msg). ier==1 betyder konvergens.
+    """
+    last = None
+    for x0 in x0_list:
+        sol, infodict, ier, msg = fsolve(fun, x0=x0, full_output=True, xtol=tol, maxfev=maxfev)
+        last = (sol, ier, msg)
+        if ier == 1 and np.all(np.isfinite(sol)):
+            return sol, ier, msg
+    return last
 
 
 # ============================================================
@@ -70,21 +75,27 @@ def bubble_residual(T, x1):
 
 
 def bubble_point_T_and_y(x1, T_guess=60.0):
-    T = fsolve(lambda TT: bubble_residual(TT, x1), x0=T_guess)[0]
+    # flera startgissningar om det behövs
+    x0s = [T_guess, 50.0, 60.0, 70.0]
+    sol, ier, msg = robust_fsolve(lambda TT: bubble_residual(TT, x1), x0s)
+    if ier != 1:
+        raise RuntimeError(f"Bubble fsolve failed for x1={x1:.4g}: {msg}")
+
+    T = float(sol[0]) if np.ndim(sol) else float(sol)
+
     x2 = 1.0 - x1
     g1, g2 = wilson_gammas(x1, W12, W21)
     P1sat = antoine_psat(T, A1, B1, C1)
     P2sat = antoine_psat(T, A2, B2, C2)
+
     y1 = g1 * x1 * P1sat / P
     y2 = g2 * x2 * P2sat / P
     ysum = y1 + y2
-    y1 /= ysum
-    y2 /= ysum
-    return T, y1, y2
+    return T, float(y1 / ysum), float(y2 / ysum)
 
 
 # ============================================================
-# Dew point: given y1, solve for unknowns (T, x1) from:
+# Dew point: given y1, solve unknowns (T, x1)
 # y1 = gamma1(x)*x1*Psat1(T)/P
 # y2 = gamma2(x)*x2*Psat2(T)/P
 # ============================================================
@@ -106,18 +117,27 @@ def dew_equations(X, y1):
 def dew_point_T_and_x(y1, T_guess=60.0, x_guess=None):
     if x_guess is None:
         x_guess = y1
-    sol = fsolve(lambda X: dew_equations(X, y1), x0=[T_guess, x_guess])
+
+    # prova flera startgissningar (ibland behövs det nära 0/1)
+    x0s = [
+        [T_guess, x_guess],
+        [60.0, y1],
+        [55.0, min(max(y1, 1e-3), 1 - 1e-3)],
+        [65.0, min(max(y1, 1e-3), 1 - 1e-3)],
+    ]
+
+    sol, ier, msg = robust_fsolve(lambda X: dew_equations(X, y1), x0s)
+    if ier != 1:
+        raise RuntimeError(f"Dew fsolve failed for y1={y1:.4g}: {msg}")
+
     T, x1 = sol
     x1 = float(np.clip(x1, 1e-14, 1 - 1e-14))
-    return T, x1
+    return float(T), x1
 
 
 # ============================================================
 # Flash: given z1 and beta=V/F, solve for (T, x1)
-# Using:
-# x_i = z_i / (1 + beta*(K_i - 1))
-# Rachford-Rice: sum z_i (K_i-1)/(1+beta*(K_i-1)) = 0
-# plus a consistency equation for x1
+# Using Rachford-Rice + one consistency equation for x1
 # ============================================================
 def flash_equations(X, z1, beta):
     T, x1 = X
@@ -133,14 +153,24 @@ def flash_equations(X, z1, beta):
 
     x1_from_z = z1 / (1.0 + beta * (K1 - 1.0))
     eq2 = x1 - x1_from_z
-
     return [RR, eq2]
 
 
 def solve_flash(z1=0.5, beta=0.5, T_guess=60.0, x_guess=None):
     if x_guess is None:
         x_guess = z1
-    sol = fsolve(lambda X: flash_equations(X, z1, beta), x0=[T_guess, x_guess])
+
+    x0s = [
+        [T_guess, x_guess],
+        [60.0, z1],
+        [55.0, z1],
+        [65.0, z1],
+    ]
+
+    sol, ier, msg = robust_fsolve(lambda X: flash_equations(X, z1, beta), x0s)
+    if ier != 1:
+        raise RuntimeError(f"Flash fsolve failed: {msg}")
+
     T, x1 = sol
     x1 = float(np.clip(x1, 1e-14, 1 - 1e-14))
     x2 = 1.0 - x1
@@ -154,24 +184,25 @@ def solve_flash(z1=0.5, beta=0.5, T_guess=60.0, x_guess=None):
     y2 /= ysum
 
     alpha = (y1 / x1) / (y2 / x2)
+
     return {
-        "T": T,
+        "T": float(T),
         "x1": x1,
         "x2": x2,
-        "y1": y1,
-        "y2": y2,
-        "K1": K1,
-        "K2": K2,
-        "gamma1": g1,
-        "gamma2": g2,
-        "P1sat": P1sat,
-        "P2sat": P2sat,
-        "alpha": alpha,
+        "y1": float(y1),
+        "y2": float(y2),
+        "K1": float(K1),
+        "K2": float(K2),
+        "gamma1": float(g1),
+        "gamma2": float(g2),
+        "P1sat": float(P1sat),
+        "P2sat": float(P2sat),
+        "alpha": float(alpha),
     }
 
 
 # ============================================================
-# Main: compute curves + flash + plots
+# Main
 # ============================================================
 def main():
     # ----- Bubble curve -----
@@ -237,4 +268,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

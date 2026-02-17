@@ -217,7 +217,7 @@ def main():
         y1_bub[i] = y1
         T_guess = T  # warm-start
 
-    # ----- Dew curve -----
+    #Dew curve
     y1_grid = np.linspace(1e-4, 1 - 1e-4, 101)
     Td = np.zeros_like(y1_grid)
     x1_dew = np.zeros_like(y1_grid)
@@ -231,25 +231,24 @@ def main():
         T_guess = T
         x_guess = x1
 
-    # ----- Plots: T-x-y -----
     plt.figure()
     plt.plot(x1_grid, Tb, linewidth=1.8, label="Bubble: T vs x1")
     plt.plot(y1_grid, Td, linewidth=1.8, label="Dew: T vs y1")
-    plt.xlabel("Mole fraction acetone")
-    plt.ylabel("Temperature (°C)")
-    plt.title("T-x-y diagram (P = 760 mmHg)")
+    plt.xlabel("x y")
+    plt.ylabel("T°C)")
+    plt.title("T-x-y")
     plt.grid(True)
-    plt.legend()
+    
 
-    # ----- Plot: x-y -----
     plt.figure()
     plt.plot(x1_grid, y1_bub, linewidth=1.8)
-    plt.xlabel("x1 (acetone in liquid)")
-    plt.ylabel("y1 (acetone in vapour)")
-    plt.title("Equilibrium curve (x-y)")
+    plt.plot([0,1], [0,1], label="y = x")
+    plt.xlabel("x")
+    plt.ylabel("y")
+    plt.title("Equilibrium curve")
     plt.grid(True)
 
-    # ----- Flash calculation -----
+    #Flash
     z1 = 0.5
     beta = 0.5
     flash = solve_flash(z1=z1, beta=beta, T_guess=60.0, x_guess=z1)

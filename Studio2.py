@@ -2,9 +2,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.optimize import fsolve
 
-# ============================================================
-# Data (1 = acetone, 2 = methanol)
-# ============================================================
 P = 760.0  # mmHg
 
 # Wilson parameters
@@ -17,9 +14,6 @@ A1, B1, C1 = 7.02447, 1161.00, 224.00   # acetone
 A2, B2, C2 = 7.87863, 1473.11, 230.00   # methanol
 
 
-# ============================================================
-# Helpers
-# ============================================================
 def antoine_psat(T, A, B, C):
     return 10.0 ** (A - (B / (T + C)))
 
@@ -47,10 +41,6 @@ def K_values(T, x1):
 
 
 def robust_fsolve(fun, x0_list, tol=1e-10, maxfev=300):
-    """
-    Prova fsolve med flera startgissningar.
-    Returnerar (sol, ier, msg). ier==1 betyder konvergens.
-    """
     last = None
     for x0 in x0_list:
         sol, infodict, ier, msg = fsolve(fun, x0=x0, full_output=True, xtol=tol, maxfev=maxfev)
@@ -60,10 +50,6 @@ def robust_fsolve(fun, x0_list, tol=1e-10, maxfev=300):
     return last
 
 
-# ============================================================
-# Bubble point: given x1, solve sum(y)=1
-# y_i = gamma_i x_i Psat_i / P
-# ============================================================
 def bubble_residual(T, x1):
     x2 = 1.0 - x1
     g1, g2 = wilson_gammas(x1, W12, W21)
@@ -93,12 +79,6 @@ def bubble_point_T_and_y(x1, T_guess=60.0):
     ysum = y1 + y2
     return T, float(y1 / ysum), float(y2 / ysum)
 
-
-# ============================================================
-# Dew point: given y1, solve unknowns (T, x1)
-# y1 = gamma1(x)*x1*Psat1(T)/P
-# y2 = gamma2(x)*x2*Psat2(T)/P
-# ============================================================
 def dew_equations(X, y1):
     T, x1 = X
     x1 = float(np.clip(x1, 1e-14, 1 - 1e-14))
@@ -135,10 +115,8 @@ def dew_point_T_and_x(y1, T_guess=60.0, x_guess=None):
     return float(T), x1
 
 
-# ============================================================
+
 # Flash: given z1 and beta=V/F, solve for (T, x1)
-# Using Rachford-Rice + one consistency equation for x1
-# ============================================================
 def flash_equations(X, z1, beta):
     T, x1 = X
     x1 = float(np.clip(x1, 1e-14, 1 - 1e-14))
@@ -201,11 +179,8 @@ def solve_flash(z1=0.5, beta=0.5, T_guess=60.0, x_guess=None):
     }
 
 
-# ============================================================
-# Main
-# ============================================================
 def main():
-    # ----- Bubble curve -----
+    #Bubble curve
     x1_grid = np.linspace(1e-4, 1 - 1e-4, 101)
     Tb = np.zeros_like(x1_grid)
     y1_bub = np.zeros_like(x1_grid)
@@ -215,7 +190,7 @@ def main():
         T, y1, _ = bubble_point_T_and_y(x1, T_guess=T_guess)
         Tb[i] = T
         y1_bub[i] = y1
-        T_guess = T  # warm-start
+        T_guess = T  
 
     #Dew curve
     y1_grid = np.linspace(1e-4, 1 - 1e-4, 101)
@@ -235,7 +210,7 @@ def main():
     plt.plot(x1_grid, Tb, linewidth=1.8, label="Bubble: T vs x1")
     plt.plot(y1_grid, Td, linewidth=1.8, label="Dew: T vs y1")
     plt.xlabel("x y")
-    plt.ylabel("T°C)")
+    plt.ylabel("T°C")
     plt.title("T-x-y")
     plt.grid(True)
     
@@ -254,7 +229,6 @@ def main():
     flash = solve_flash(z1=z1, beta=beta, T_guess=60.0, x_guess=z1)
 
     print("\n--- FLASH RESULT ---")
-    print(f"P      = {P:.1f} mmHg")
     print(f"z1     = {z1:.3f}")
     print(f"beta   = {beta:.3f}  (V/F)")
     print(f"T      = {flash['T']:.4f} °C")

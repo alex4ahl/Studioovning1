@@ -116,7 +116,7 @@ def dew_point_T_and_x(y1, T_guess=60.0, x_guess=None):
 
 
 
-# Flash: given z1 and beta=V/F, solve for (T, x1)
+# Flash: z1 and beta=V/F givna, solve for (T, x1)
 def flash_equations(X, z1, beta):
     T, x1 = X
     x1 = float(np.clip(x1, 1e-14, 1 - 1e-14))

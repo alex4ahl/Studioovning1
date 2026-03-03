@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 
 # ========================
-# Data input
+# Data input (given)
 # ========================
 
 mc = 4.0          # Massflöde kalla/produktflödet [kg/s]
@@ -25,7 +25,7 @@ t_operation = 4000.0  # Drifttid [h/år]
 
 
 # ========================
-# Grundläggande storheter
+# Vi har att
 # ========================
 
 # Kapacitetsflöden [W/K]
@@ -39,7 +39,7 @@ dT_max = Th_in - Tc_in  # Maximal tempdifferens [K]
 
 
 # ========================
-# Hjälpfunktioner
+# Funktioner
 # ========================
 
 def epsilon_countercurrent(NTU, Cr):

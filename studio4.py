@@ -94,8 +94,7 @@ q0_kW = q_kW(Abef)    # [kW]
 def profit(A):
     """
     Årlig vinst [SEK/år] som funktion av total area A [m²].
-    Extra sparad ånga relativt endast befintlig vvx
-    minus årlig kostnad för extra area.
+    Extra sparad ånga relativt endast befintlig vvx minus årlig kostnad för extra area.
     """
     # Sparad effekt (kW) relativt bara den gamla vvx:en
     q_saved_kW = q_kW(A) - q0_kW
@@ -165,7 +164,7 @@ rel_saved_percent = (Q_saved_kW / steam_old_kW) * 100.0
 
 
 # ========================
-# Enkel plott av vinst mot area (frivilligt, pedagogiskt)
+# Plott av vinst mot area
 # ========================
 
 A_values = np.linspace(Abef, Abef + 40, 200)   # Total area från befintlig till +40 m²
@@ -178,14 +177,14 @@ plt.xlabel('Total area A [m²]')
 plt.ylabel('Årlig vinst [SEK/år]')
 plt.title('Ekonomisk optimering av värmeväxlaryta')
 plt.grid(True)
-plt.show()  # Avkommentera om du vill se grafen
+plt.show()
 
 
 # ========================
-# Presentera resultatet
+# Resultat print
 # ========================
 
-print("===== Resultat för Studio 4 – VVX-optimering =====")
+print("Resultat för Studio 4:")
 print(f"Optimal total area (befintlig + ny): {A_opt_total:.2f} m²")
 print(f"Optimal ny area (A_new):             {A_new_opt:.2f} m²")
 
